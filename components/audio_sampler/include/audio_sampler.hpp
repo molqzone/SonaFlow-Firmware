@@ -1,7 +1,8 @@
 #ifndef AUDIO_SAMPLER_HPP_
 #define AUDIO_SAMPLER_HPP_
 
-#include <cstddef>
+#include <cstdint>
+#include <memory>
 
 #include "driver/i2s_std.h"
 #include "driver/i2s_types.h"
@@ -13,21 +14,20 @@
 class AudioSampler {
    public:
     /**
-   * @brief Construct a new AudioSampler object
-   */
-    AudioSampler();
+     * @brief Creates and initializes an AudioSampler instance.
+     *
+     * This factory method handles all I2S peripheral configuration and
+     * returns a fully initialized object.
+     *
+     * @return A std::unique_ptr containing the AudioSampler on success,
+     * or nullptr on failure.
+     */
+    static std::unique_ptr<AudioSampler> Create();
 
     /**
    * @brief Destroy the AudioSampler object
    */
     ~AudioSampler();
-
-    /**
-   * @brief Initializes the I2S hardware. This method must be called and checked
-   * for success before any other operations are performed.
-   * @return esp_err_t ESP_OK on success, or an error code on failure.
-   */
-    esp_err_t init();
 
     /**
    * @brief Reads a block of audio samples from the microphone.
@@ -40,7 +40,7 @@ class AudioSampler {
    * occurs.
    * @return esp_err_t ESP_OK on success, or an ESP-IDF error code on failure.
    */
-    esp_err_t read(int16_t* dest, size_t samples, size_t* samples_read);
+    esp_err_t Read(int16_t* dest, size_t samples, size_t* samples_read);
 
     // Delete the copy constructor and copy assignment operator.
     // An AudioSampler instance represents a unique hardware resource and cannot
@@ -57,13 +57,19 @@ class AudioSampler {
 
    private:
     /**
-   * @brief Handle for the configured I2S receive channel.
-   *
-   * This handle is the unique identifier for the hardware resource managed
-   * by this class instance. It's initialized in the constructor and released
-   * in the destructor. A null or invalid handle indicates an empty/moved-from
-   * state.
-   */
+     * @brief Private constructor to enforce creation via the factory method.
+     * @param handle An already initialized I2S channel handle.
+     */
+    explicit AudioSampler(i2s_chan_handle_t handle);
+
+    /**
+     * @brief Handle for the configured I2S receive channel.
+     *
+     * This handle is the unique identifier for the hardware resource managed
+     * by this class instance. It's initialized in the constructor and released
+     * in the destructor. A null or invalid handle indicates an empty/moved-from
+     * state.
+     */
     i2s_chan_handle_t rx_handle_;
 };
 
