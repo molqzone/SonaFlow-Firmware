@@ -32,12 +32,12 @@ class AudioSampler {
     /**
    * @brief Reads a block of audio samples from the microphone.
    *
-   * @param[out] buffer Pointer to the destination buffer where audio data will
-   * be stored.
-   * @param[in]  buffer_size The size of the destination buffer in bytes.
-   * @param[out] bytes_read Pointer to a variable where the number of bytes
-   * actually read will be stored. This can be less than buffer_size if a
-   * timeout occurs.
+   * @param[out] dest Pointer to the destination buffer where samples will be stored.
+   * The buffer must be large enough to hold 'samples' int16_t values.
+   * @param[in]  samples The number of int16_t samples to read into the dest buffer.
+   * @param[out] samples_read Pointer to a variable where the number of samples
+   * actually read will be stored. This can be less than 'samples' if a timeout
+   * occurs.
    * @return esp_err_t ESP_OK on success, or an ESP-IDF error code on failure.
    */
     esp_err_t read(int16_t* dest, size_t samples, size_t* samples_read);
@@ -56,15 +56,6 @@ class AudioSampler {
     AudioSampler& operator=(AudioSampler&& other) noexcept;
 
    private:
-    /**
-   * @brief Private helper function to release all acquired I2S resources.
-   *
-   * This function checks if the handle is valid, disables the channel,
-   * deletes it, and logs any errors encountered during the process.
-   * It ensures cleanup logic is centralized and consistent.
-   */
-    void releaseResources();
-
     /**
    * @brief Handle for the configured I2S receive channel.
    *

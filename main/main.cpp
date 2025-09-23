@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 #include <cstdint>
 #include <cstdlib>
 #include <numeric>
@@ -16,65 +14,83 @@ static const char* TAG = "MAIN";
 void audio_reader_task(void* param) {
     AudioSampler* sampler = static_cast<AudioSampler*>(param);
 
+    // Use a C++ vector for automatic memory management.
+    // This is safer and avoids manual malloc/free,
+    // preventing the memory leak in the original code.
     const size_t buffer_samples = 256;
-    int16_t* samples = (int16_t*)malloc(buffer_samples * sizeof(int16_t));
+    std::vector<int16_t> samples(buffer_samples);
+    const size_t buffer_bytes = samples.size() * sizeof(int16_t);
 
-    if (!samples) {
-        ESP_LOGE(TAG, "Failed to allocate buffer");
-        vTaskDelete(NULL);
-        return;
-    }
-
-    ESP_LOGI(TAG, "Audio reader task started");
+    ESP_LOGI(TAG, "Audio reader task started. Reading %d bytes per block.",
+             buffer_bytes);
 
     while (true) {
-        size_t samples_read = 0;
+        size_t bytes_read = 0;
 
-        esp_err_t ret = sampler->read(samples, buffer_samples, &samples_read);
+        // The 'read' function now takes a pointer to the vector's underlying data.
+        esp_err_t ret =
+            sampler->read(samples.data(), buffer_bytes, &bytes_read);
 
         if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "Read error: %s", esp_err_to_name(ret));
+            ESP_LOGE(TAG, "I2S read error: %s", esp_err_to_name(ret));
+            // A delay here prevents the task from monopolizing the CPU on error.
             vTaskDelay(pdMS_TO_TICKS(10));
             continue;
         }
 
-        if (samples_read > 0) {
-            for (size_t i = 0; i < samples_read; i++) {
-                printf("%d\n", samples[i]);
-            }
+        if (bytes_read > 0) {
+            // Instead of printing raw values, which can be difficult to read
+            // and slow, we dump the raw data as hexadecimal bytes.
+            // This is much more robust for debugging I2S alignment issues.
+            ESP_LOG_BUFFER_HEXDUMP(TAG, samples.data(), bytes_read,
+                                   ESP_LOG_INFO);
         } else {
+            // If no data was read, yield to other tasks to prevent a crash.
             vTaskDelay(pdMS_TO_TICKS(1));
         }
     }
 
-    free(samples);
+    // The vector automatically frees memory when the task function returns.
+    // However, this line is still unreachable in a while(true) loop.
+    // It's still good practice, but not necessary here.
     vTaskDelete(NULL);
 }
 
 // --- Main Entry Point ---
-extern "C" void app_main(void) {
-    ESP_LOGI(TAG, "Audio processing application started");
+extern "C" void app_main() {
+    ESP_LOGI("MAIN", "Starting audio application");
 
     static AudioSampler sampler;
 
-    esp_err_t ret = sampler.init();
-
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to initialize audio sampler: %d, %s", ret,
-                 esp_err_to_name(ret));
+    // Initialize the sampler and check for errors.
+    if (sampler.init() != ESP_OK) {
+        ESP_LOGE("MAIN", "Failed to initialize sampler");
         return;
     }
 
-    ESP_LOGI(TAG, "AudioSampler initialized successfully.");
+    // Create the audio reader task.
+    xTaskCreate(
+        [](void* param) {
+            AudioSampler* sampler = static_cast<AudioSampler*>(param);
+            const size_t buffer_size = 256;
+            int16_t buffer[buffer_size];
 
-    xTaskCreate(audio_reader_task, "audio_reader_task",
-                12288,  // Increased stack size for stability
-                &sampler, 5, NULL);
+            while (true) {
+                size_t samples_read = 0;
+                if (sampler->read(buffer, buffer_size, &samples_read) ==
+                        ESP_OK &&
+                    samples_read > 0) {
+                    for (size_t i = 0; i < samples_read; i++) {
+                        printf("%d\n", buffer[i]);
+                    }
+                }
+                vTaskDelay(1);
+            }
+        },
+        "audio_reader", 4096, &sampler, 5, nullptr);
 
-    ESP_LOGI(TAG, "Audio reader task created.");
-
-    // Add an infinite loop to prevent app_main from returning
-    while (1) {
-        vTaskDelay(pdMS_TO_TICKS(1000));
+    // Main loop
+    while (true) {
+        vTaskDelay(1000);
     }
 }

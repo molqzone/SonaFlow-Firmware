@@ -4,6 +4,7 @@
 #include <utility>
 #include <vector>
 
+#include "driver/i2s_common.h"
 #include "driver/i2s_pdm.h"
 #include "driver/i2s_std.h"
 #include "esp_log.h"
@@ -26,18 +27,6 @@ constexpr gpio_num_t I2S_STD_GPIO_WS = GPIO_NUM_4;
 constexpr gpio_num_t I2S_STD_GPIO_BCLK = GPIO_NUM_5;
 constexpr gpio_num_t I2S_STD_GPIO_DIN = GPIO_NUM_6;
 }  // namespace
-
-// --- Private Helper Functions ---
-void AudioSampler::releaseResources() {
-    // Best-effort cleanup. Log errors but don't check return values
-    // as this is called from contexts where we can't fail (destructor).
-    ESP_LOGI(TAG, "Releasing I2S resources...");
-    if (rx_handle_) {
-        ESP_ERROR_CHECK_WITHOUT_ABORT(i2s_channel_disable(rx_handle_));
-        ESP_ERROR_CHECK_WITHOUT_ABORT(i2s_del_channel(rx_handle_));
-        rx_handle_ = nullptr;
-    }
-}
 
 // --- Constructor ---
 AudioSampler::AudioSampler() : rx_handle_(nullptr) {
@@ -103,8 +92,11 @@ esp_err_t AudioSampler::init() {
 
 // --- Destructor ---
 AudioSampler::~AudioSampler() {
-    ESP_LOGI(TAG, "Destructing AudioSampler...");
-    releaseResources();
+    if (rx_handle_ != nullptr) {
+        ESP_LOGI(TAG, "Disabling I2S channel...");
+        ESP_ERROR_CHECK(i2s_channel_disable(rx_handle_));
+    }
+    ESP_LOGI(TAG, "AudioSampler destructed.");
 }
 
 // --- Move Constructor ---
@@ -117,7 +109,11 @@ AudioSampler::AudioSampler(AudioSampler&& other) noexcept
 // --- Move Assignment Operator ---
 AudioSampler& AudioSampler::operator=(AudioSampler&& other) noexcept {
     if (this != &other) {
-        releaseResources();  // Release our own resource first
+        if (rx_handle_ != nullptr) {
+            i2s_channel_disable(rx_handle_);
+        }
+
+        // Transfer ownership of the I2S handle
         rx_handle_ = other.rx_handle_;
         other.rx_handle_ = nullptr;
     }
