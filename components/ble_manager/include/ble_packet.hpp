@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BLE_PACKET_HPP_
+#define BLE_PACKET_HPP_
 
 #include <cstdint>
 #include <vector>
@@ -47,11 +48,11 @@ class PacketEncoder {
     static std::vector<uint8_t> Encode(const AudioPacket& packet);
 
     /**
-   * @brief Calculates XOR checksum for data integrity.
-   * @param data Pointer to the data buffer.
-   * @param size Size of the data buffer.
-   * @return Calculated checksum value.
-   */
+     * @brief Calculates XOR checksum for data integrity.
+     * @param data Pointer to the data buffer.
+     * @param size Size of the data buffer.
+     * @return Calculated checksum value.
+     */
     static uint8_t CalculateChecksum(const uint8_t* data, size_t size);
 };
 
@@ -61,20 +62,22 @@ class PacketEncoder {
 class PacketDecoder {
    public:
     /**
-   * @brief Decodes raw bytes into an AudioPacket.
-   * @param data Pointer to the raw byte data.
-   * @param size Size of the data buffer.
-   * @return Decoded AudioPacket if valid, empty vector if invalid.
-   */
+     * @brief Decodes raw bytes into an AudioPacket.
+     * @param data Pointer to the raw byte data.
+     * @param size Size of the data buffer.
+     * @return Decoded AudioPacket if valid, empty vector if invalid.
+     */
     static bool Decode(const uint8_t* data, size_t size, AudioPacket& packet);
 
     /**
-   * @brief Validates packet integrity using header and checksum.
-   * @param data Pointer to the packet data.
-   * @param size Size of the packet data.
-   * @return True if packet is valid, false otherwise.
-   */
+     * @brief Validates packet integrity using header and checksum.
+     * @param data Pointer to the packet data.
+     * @param size Size of the packet data.
+     * @return True if packet is valid, false otherwise.
+     */
     static bool ValidatePacket(const uint8_t* data, size_t size);
 };
 
 }  // namespace ble
+
+#endif  // BLE_PACKET_HPP_
