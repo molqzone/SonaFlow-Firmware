@@ -45,7 +45,8 @@ class PacketEncoder {
    * @param packet Source packet to encode.
    * @return Vector containing encoded bytes.
    */
-    static std::vector<uint8_t> Encode(const AudioPacket& packet);
+    static std::array<uint8_t, PacketConfig::kPacketSize> Encode(
+        const AudioPacket& packet);
 
     /**
      * @brief Calculates XOR checksum for data integrity.

@@ -1,10 +1,13 @@
 #include "ble_packet.hpp"
+#include <array>
+#include <cstdint>
 #include <cstring>
 
 namespace ble {
 
-std::vector<uint8_t> PacketEncoder::Encode(const AudioPacket& packet) {
-    std::vector<uint8_t> encoded_data(PacketConfig::kPacketSize);
+std::array<uint8_t, PacketConfig::kPacketSize> PacketEncoder::Encode(
+    const AudioPacket& packet) {
+    std::array<uint8_t, PacketConfig::kPacketSize> encoded_data;
 
     encoded_data[0] = packet.header;
     encoded_data[1] = packet.data_type;
