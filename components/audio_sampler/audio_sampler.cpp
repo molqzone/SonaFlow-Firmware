@@ -1,6 +1,7 @@
 #include "audio_sampler.hpp"
 #include <sys/_intsup.h>
 
+#include <array>
 #include <cstdint>
 #include <utility>
 #include <vector>
@@ -30,6 +31,9 @@ constexpr gpio_num_t kI2sStdGpioDin = GPIO_NUM_6;
 
 // Conversion constants
 constexpr int16_t kAdcToPcmBitShift = 12;
+
+// Limitation constants
+constexpr size_t kMaxAudioSamples = 256;
 }  // namespace
 
 // --- Static Factory Method ---
@@ -142,9 +146,22 @@ esp_err_t AudioSampler::Read(int16_t* dest, size_t samples,
         return ESP_FAIL;
     }
 
+    // Validate samples argument
+    if (samples > kMaxAudioSamples) {
+        ESP_LOGE(
+            kTag,
+            "Requested sample count (%zu) exceeds maximum buffer size (%zu).",
+            samples, kMaxAudioSamples);
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (samples == 0) {
+        *samples_read = 0;
+        return ESP_OK;
+    }
+
     // Read as 32-bit samples internally
-    std::vector<int32_t> bit32_buffer(samples);
-    size_t bytes_read;
+    std::array<int32_t, kMaxAudioSamples> bit32_buffer;
+    size_t bytes_read = 0;
 
     esp_err_t ret =
         i2s_channel_read(rx_handle_, bit32_buffer.data(),
