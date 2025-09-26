@@ -154,6 +154,16 @@ esp_err_t BLEManager::SendAudioPacket(const AudioPacket& packet) {
     return ESP_OK;
 }
 
+bool BLEManager::IsConnected() const {
+    return conn_handle_ != BLE_HS_CONN_HANDLE_NONE;
+}
+
+bool BLEManager::IsAdvertising() const {
+    // This function directly queries the NimBLE stack for the current
+    // advertising status.
+    return ble_gap_adv_active();
+}
+
 void BLEManager::SetOnConnectedCallback(std::function<void()> callback) {
     on_connected_cb_ = std::move(callback);
 }

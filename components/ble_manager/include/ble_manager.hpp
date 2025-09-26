@@ -55,14 +55,6 @@ class BLEManager {
     BLEManager(const BLEManager&) = delete;
     BLEManager& operator=(const BLEManager&) = delete;
 
-    static int BLEGapEventHandler(struct ble_gap_event* event, void* arg);
-
-    // Handles stack synchronization events.
-    static void BLESyncEventHandler(void);
-
-    // Handles stack reset events.
-    static void BLEResetEventHandler(int reason);
-
     /**
      * @brief Starts BLE advertising.
      * * Configures and starts the BLE advertisement process. This method
@@ -86,6 +78,18 @@ class BLEManager {
      * @return esp_err_t ESP_OK on success, or an error code otherwise.
      */
     esp_err_t SendAudioPacket(const ble::AudioPacket& packet);
+
+    /**
+     * @brief Checks if a client device is currently connected.
+     * @return true if connected, false otherwise.
+     */
+    bool IsConnected() const;
+
+    /**
+     * @brief Checks if the device is currently advertising.
+     * @return true if advertising, false otherwise.
+     */
+    bool IsAdvertising() const;
 
     /**
    * @brief Disconnects the current BLE connection.
