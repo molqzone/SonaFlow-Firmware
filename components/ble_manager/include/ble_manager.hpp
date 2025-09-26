@@ -1,6 +1,7 @@
 #ifndef BLE_MANAGER_HPP_
 #define BLE_MANAGER_HPP_
 
+#include <array>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -32,21 +33,42 @@ namespace ble {
 class BLEManager {
    public:
     /**
+     * @brief Singleton Factory Method. Creates and initializes the unique BLEManager instance.
+     *
+     * This is the only way to create the BLEManager object. It ensures the instance is
+     * properly initialized and handles potential initialization failures by returning
+     * an error code.
+     *
+     * @return esp_err_t Returns ESP_OK on success, or an error code if initialization fails.
+     */
+    static esp_err_t CreateInstance();
+
+    /**
      * @brief Gets the singleton instance of the BLEManager.
      * @return A pointer to the unique BLEManager instance.
      */
     static BLEManager* GetInstance();
 
+    ~BLEManager() = default;
+
     // Deleting copy constructor and assignment operator to enforce singleton.
     BLEManager(const BLEManager&) = delete;
     BLEManager& operator=(const BLEManager&) = delete;
+
+    static int BLEGapEventHandler(struct ble_gap_event* event, void* arg);
+
+    // Handles stack synchronization events.
+    static void BLESyncEventHandler(void);
+
+    // Handles stack reset events.
+    static void BLEResetEventHandler(int reason);
 
     /**
      * @brief Starts BLE advertising.
      * * Configures and starts the BLE advertisement process. This method
      * makes the device discoverable by other BLE central devices.
      */
-    void StartAdvertising();
+    esp_err_t StartAdvertising();
 
     /**
      * @brief Stops BLE advertising.
@@ -99,75 +121,80 @@ class BLEManager {
         std::function<void(const std::string& error_message)> callback);
 
     /**
-     * @brief Configures the BLE connection parameters.
-     * @param min_interval The minimum connection interval (units of 1.25 ms).
-     * @param max_interval The maximum connection interval (units of 1.25 ms).
-     * @param latency The slave latency.
-     * @param timeout The connection supervision timeout (units of 10 ms).
+     * @brief Static callback for GATT (Generic Attribute Profile) access events.
+     *
+     * This C-style callback handles read/write requests to our characteristics.
      */
-    void ConfigureConnectionParams(uint16_t min_interval, uint16_t max_interval,
-                                   uint16_t latency, uint16_t timeout);
-
-    /**
-     * @brief Sets the maximum transmission unit (MTU) size.
-     * @param mtu The desired MTU value.
-     */
-    void SetMaxMtu(uint16_t mtu);
-
-    /**
-     * @brief Enables BLE security features.
-     * @param require_mitm If true, requires Man-in-the-Middle protection.
-     * @param io_cap The I/O capabilities of the device (e.g., display, keyboard).
-     */
-    void EnableSecurity(bool require_mitm = true);
+    static int GattAccessCallback(uint16_t conn_handle, uint16_t attr_handle,
+                                  struct ble_gatt_access_ctxt* ctxt, void* arg);
 
    private:
-    BLEManager();
-    ~BLEManager() = default;
-
-    // NimBLE uses a single unified event handler for all host-level events.
-    static int BleHostEventHandler(struct ble_hs_event* event, void* arg);
-
-    // Instead of a single GATT server handler, NimBLE uses callbacks for each characteristic.
-    // The implementations will be in the .cpp file.
-    static int OnAudioCharacteristicWrite(uint16_t conn_handle,
-                                          uint16_t attr_handle,
-                                          struct ble_gatt_access_ctxt* ctxt,
-                                          void* arg);
-    static int OnAudioCharacteristicRead(uint16_t conn_handle,
-                                         uint16_t attr_handle,
-                                         struct ble_gatt_access_ctxt* ctxt,
-                                         void* arg);
+    BLEManager() = default;
 
     /**
-     * @brief Internal method to process received raw data.
-     * @param data Pointer to the raw data buffer.
-     * @param length The size of the data buffer.
+     * @brief Factory method for creating the unique_ptr instance.
+     * This is called internally by CreateInstance().
      */
-    void HandleReceivedData(const uint8_t* data, size_t length);
+    static std::unique_ptr<BLEManager> Create();
 
     /**
-     * @brief Internal method to send an encoded packet.
-     * @param packet_data The byte vector of the encoded packet.
-     * @return True if the packet was successfully queued for sending, false otherwise.
+     * @brief Internal initialization method called by CreateInstance.
+     *
+     * Sets up NVS, the NimBLE port, host configurations, services, and starts
+     * the necessary FreeRTOS tasks.
+     *
+     * @return ESP_OK on success, or an ESP-IDF error code on failure.
      */
-    bool InternalSendPacket(const std::vector<uint8_t>& packet_data);
+    esp_err_t Initialize();
 
     /**
-     * @brief FreeRTOS task function for handling the send queue.
-     * @param arg Task arguments (unused in this case).
+     * @brief The main task for the NimBLE host stack.
+     *
+     * This task runs the nimble_port_run() event loop, which processes all
+     * incoming BLE events. This function must not return.
      */
-    static void SendTask(void* arg);
+    static void NimbleHostTask(void* param);
 
-    // Private member variables to hold the state of the BLE manager.
-    EventGroupHandle_t connection_events_ = nullptr;
+    static void SendTask(void* param);
+
+    /**
+     * @brief Static callback for NimBLE stack synchronization events.
+     */
+    static void OnSync();
+
+    /**
+     * @brief Static callback for NimBLE stack reset events.
+     */
+    static void OnReset(int reason);
+
+    /**
+     * @brief Static callback for all GAP (Generic Access Profile) events.
+     *
+     * This is the C-style entry point for connection, disconnection, etc.
+     * It forwards the event to the singleton's non-static handler.
+     */
+    static int GapEventHandler(struct ble_gap_event* event, void* arg);
+
+    /**
+     * @brief Non-static handler for GAP events.
+     *
+     * Processes events like connect and disconnect, and invokes user callbacks.
+     */
+    void HandleGapEvent(struct ble_gap_event* event);
+
+    /**
+     * @brief Defines and registers all GATT services and characteristics.
+     */
+    esp_err_t RegisterGattServices();
+
+    static std::unique_ptr<BLEManager> s_instance_;
 
     std::function<void()> on_connected_cb_;
     std::function<void()> on_disconnected_cb_;
     std::function<void(const ble::AudioPacket&)> on_audio_packet_received_cb_;
     std::function<void(const std::string& error_message)> on_error_cb_;
 
-    uint16_t conn_id_ = 0;
+    uint16_t conn_handle_ = BLE_HS_CONN_HANDLE_NONE;
 
     QueueHandle_t send_queue_ = nullptr;
     TaskHandle_t send_task_handle_ = nullptr;
