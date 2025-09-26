@@ -15,7 +15,7 @@
 #include "hal/i2s_types.h"
 
 // --- Static Hardware Configuration Constants ---
-namespace {
+namespace audio {
 static const char* kTag = "AudioSource";
 
 // I2S peripheral configuration
@@ -41,7 +41,6 @@ constexpr size_t kMaxAudioSamples = 256;
 // It directly affects the sensitivity of the feature.
 // **YOU MUST TUNE THIS VALUE** by observing the raw RMS output for your setup.
 constexpr float kMaxRmsValue = 10000.0f;
-}  // namespace
 
 // --- Static Factory Method ---
 std::unique_ptr<AudioSource> AudioSource::Create() {
@@ -247,3 +246,5 @@ AudioSource& AudioSource::operator=(AudioSource&& other) noexcept {
     ESP_LOGI(kTag, "AudioSource move assigned.");
     return *this;
 }
+
+}  // namespace audio

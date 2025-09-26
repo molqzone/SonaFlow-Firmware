@@ -8,6 +8,8 @@
 #include "driver/i2s_std.h"
 #include "driver/i2s_types.h"
 
+namespace audio {
+
 /**
  * @class AudioSampler
  * @brief A class to manage on I2S microphone input channel.
@@ -85,5 +87,7 @@ class AudioSource {
      */
     i2s_chan_handle_t rx_handle_;
 };
+
+}  // namespace audio
 
 #endif  // AUDIO_SOURCE_HPP_
