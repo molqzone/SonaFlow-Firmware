@@ -155,6 +155,15 @@ class BLEManager {
      */
     static void NimbleHostTask(void* param);
 
+    /**
+     * @brief FreeRTOS task that sends outgoing BLE packets from the queue.
+     *
+     * This task waits for encoded data arrays to be placed in the send queue.
+     * Upon receiving an item, it sends it as a BLE notification to the connected
+     * client.
+     *
+     * @param param A void pointer to the BLEManager instance that owns this task.
+     */
     static void SendTask(void* param);
 
     /**
