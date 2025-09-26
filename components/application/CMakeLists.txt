@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "audio_source.cpp"
+    SRCS "application.cpp"
     INCLUDE_DIRS "include"
     REQUIRES common_defs driver
 )
