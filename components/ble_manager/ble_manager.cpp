@@ -273,8 +273,6 @@ void BLEManager::HandleGapEvent(struct ble_gap_event* event) {
             if (on_disconnected_cb_) {
                 on_disconnected_cb_();
             }
-            // After disconnection, restart advertising to be discoverable again.
-            StartAdvertising();
             break;
 
         case BLE_GAP_EVENT_ADV_COMPLETE:

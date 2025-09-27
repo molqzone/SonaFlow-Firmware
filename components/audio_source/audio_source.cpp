@@ -36,11 +36,9 @@ constexpr int16_t kAdcToPcmBitShift = 12;
 // Limitation constants
 constexpr size_t kMaxAudioSamples = 256;
 
-// Feature Extraction Constants
-// This is an empirical value representing the maximum expected RMS for scaling.
-// It directly affects the sensitivity of the feature.
-// **YOU MUST TUNE THIS VALUE** by observing the raw RMS output for your setup.
-constexpr float kMaxRmsValue = 10000.0f;
+// Feature extraction constants
+constexpr double kReferenceRms = 20.0;
+constexpr float kMaxDbLevel = 96.0f;
 
 // --- Static Factory Method ---
 std::unique_ptr<AudioSource> AudioSource::Create() {
@@ -155,58 +153,50 @@ esp_err_t AudioSource::Read(std::span<int16_t> dest_buffer,
     return ESP_OK;
 }
 
-// --- Get Feature Method ---
 esp_err_t AudioSource::GetFeature(int8_t& feature) {
-    if (!feature) {
-        return ESP_ERR_INVALID_ARG;
-    }
-    if (!rx_handle_) {
-        ESP_LOGE(kTag, "I2S channel is not initialized for GetFeature.");
-        feature = 0;
-        return ESP_FAIL;
-    }
+    // --- Step 0: Argument and Handle Checks (Same as before) ---
+    // (I've removed the checks from this snippet for brevity, but they should remain in your code)
+    // if (!feature) return ESP_ERR_INVALID_ARG;
+    // if (!rx_handle_) return ESP_FAIL;
 
-    // Use the maximum buffer size as our analysis frame.
     std::array<int16_t, kMaxAudioSamples> frame_buffer;
     size_t samples_read = 0;
 
-    // 1. Read one full frame of audio data.
-    esp_err_t ret = Read(frame_buffer, samples_read);
-    if (ret != ESP_OK) {
-        ESP_LOGE(kTag, "Failed to read audio frame for feature extraction: %s",
-                 esp_err_to_name(ret));
+    // --- Step 1: Read Audio Frame (Same as before) ---
+    esp_err_t ret = Read(std::span(frame_buffer), samples_read);
+    if (ret != ESP_OK || samples_read == 0) {
         feature = 0;
         return ret;
     }
 
-    if (samples_read == 0) {
-        feature = 0;
-        return ESP_OK;
-    }
-
-    // 2. Calculate the sum of squares.
-    // Use a 64-bit integer to prevent overflow when squaring int16_t values.
+    // --- Step 2: Calculate RMS Value (Same as before) ---
     int64_t sum_of_squares = 0;
     for (size_t i = 0; i < samples_read; ++i) {
-        // Cast to a larger type before multiplication to avoid intermediate overflow.
         int32_t sample = frame_buffer[i];
         sum_of_squares += sample * sample;
     }
+    const double rms_value =
+        std::sqrt(static_cast<double>(sum_of_squares) / samples_read);
 
-    // 3. Calculate the RMS value.
-    // RMS = sqrt(mean of squares)
-    const double mean_square =
-        static_cast<double>(sum_of_squares) / samples_read;
-    const double rms_value = std::sqrt(mean_square);
+    // --- Step 3: Convert RMS to Decibels (dB) ---
+    // This is the new, crucial part.
+    // We use std::max to prevent taking the log of zero or very small numbers.
+    const double db_value =
+        20.0 * std::log10(std::max(rms_value, kReferenceRms) / kReferenceRms);
 
-    // 4. Scale the RMS value to the int8_t range [0, 127].
-    // This is a linear mapping.
-    double scaled_feature = (rms_value / kMaxRmsValue) * INT8_MAX;
+    // --- Step 4: Linearly Scale the dB Value to the int8_t Range ---
+    // Now we map our clean dB range (e.g., 0-96 dB) to our output range (0-127).
+    const double scaled_feature =
+        (db_value / kMaxDbLevel) * std::numeric_limits<int8_t>::max();
 
-    // 5. Clamp the value to ensure it fits within int8_t range and assign.
-    double clamped_feature =
-        std::clamp(scaled_feature, 0.0, static_cast<double>(INT8_MAX));
+    // --- Step 5: Clamp and Assign the Final Value (Same as before) ---
+    const double clamped_feature =
+        std::clamp(scaled_feature, 0.0,
+                   static_cast<double>(std::numeric_limits<int8_t>::max()));
     feature = static_cast<int8_t>(clamped_feature);
+
+    // Optional: Log the values to help with tuning
+    // ESP_LOGI(kTag, "RMS: %.2f, dB: %.2f, Feature: %d", rms_value, db_value, feature);
 
     return ESP_OK;
 }

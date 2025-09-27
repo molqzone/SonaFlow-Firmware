@@ -1,77 +1,57 @@
-#include <iostream>
-#include <string>
-
+#include "esp_event.h"
 #include "esp_log.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
+#include "nvs_flash.h"
 
-#include "ble_manager.hpp"
+// The only application-specific header we need is our main coordinator.
+#include "application.hpp"
 
-static const char* kTag = "main";
+namespace {
+// File-local constants.
+static const char* kTag = "app_main";
+}  // namespace
 
-// 接收到BLE数据包时的回调函数
-void OnAudioPacketReceived(const ble::AudioPacket& packet) {
-    ESP_LOGI(kTag, "Received audio packet from BLE. Sequence: %d, Payload: %d",
-             packet.sequence, packet.payload);
-}
-
-// BLE连接成功时的回调函数
-void OnConnected() {
-    ESP_LOGI(kTag, "BLE device connected! Sending a test packet...");
-
-    // 创建一个测试用的AudioPacket
-    ble::AudioPacket test_packet;
-    test_packet.header = ble::PacketConfig::kHeaderSync;
-    test_packet.data_type = ble::PacketConfig::kDataTypeAudio;
-    test_packet.sequence = 123;
-    test_packet.timestamp = esp_log_timestamp();
-    test_packet.payload = 42;
-    test_packet.checksum = 0;  // 编码时会自动计算
-
-    // 发送数据包
-    esp_err_t ret =
-        ble::BLEManager::GetInstance()->SendAudioPacket(test_packet);
-    if (ret != ESP_OK) {
-        ESP_LOGE(kTag, "Failed to send test packet, error: %s",
-                 esp_err_to_name(ret));
+// The entry point of the application must have C linkage.
+extern "C" void app_main(void) {
+    // --- 1. Perform low-level system initialization ---
+    ESP_LOGI(kTag, "Initializing NVS flash...");
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
+        ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        // NVS partition contains errors, erase and retry.
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
     }
-}
+    ESP_ERROR_CHECK(ret);
 
-// BLE断开连接时的回调函数
-void OnDisconnected() {
-    ESP_LOGW(
-        kTag,
-        "BLE device disconnected. Advertising will be handled internally.");
-    // 移除这里的StartAdvertising()，避免重复调用
-}
+    ESP_LOGI(kTag, "Initializing default event loop...");
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-// 发生错误时的回调函数
-void OnError(const std::string& error_message) {
-    ESP_LOGE(kTag, "BLE error: %s", error_message.c_str());
-}
+    // --- 2. Create and initialize the main Application instance ---
+    // We use the CreateInstance method from our singleton. It handles the
+    // creation and initialization of all other components (BLEManager,
+    // AudioSource).
+    ESP_LOGI(kTag, "Creating Application instance...");
+    ret = app::Application::CreateInstance();
 
-extern "C" void app_main() {
-    ESP_LOGI(kTag, "Starting BLE Manager test...");
-
-    // 1. 初始化 BLEManager
-    int ret = ble::BLEManager::CreateInstance();
-    if (ret != ESP_OK) {
-        ESP_LOGE(kTag, "Failed to create BLEManager instance, aborting.");
-        return;
+    // --- 3. Check for initialization success and start the application ---
+    if (ret == ESP_OK) {
+        ESP_LOGI(kTag, "Application created successfully. Starting...");
+        // If initialization was successful, get the instance and start its main
+        // task.
+        app::Application::GetInstance().Start();
+    } else {
+        ESP_LOGE(kTag,
+                 "FATAL: Failed to create Application instance. Error: %s (%d)",
+                 esp_err_to_name(ret), ret);
+        ESP_LOGE(kTag, "System will halt.");
+        // If the core application fails to initialize, there is nothing more to
+        // do. We enter an infinite loop to halt further execution. A production
+        // device might trigger a reboot or a safe-mode here.
+        while (true) {
+            vTaskDelay(portMAX_DELAY);
+        }
     }
 
-    // 2. 获取实例并设置所有回调函数
-    ble::BLEManager* ble_manager = ble::BLEManager::GetInstance();
-    ble_manager->SetOnConnectedCallback(OnConnected);
-    ble_manager->SetOnDisconnectedCallback(OnDisconnected);
-    ble_manager->SetOnAudioPacketReceivedCallback(OnAudioPacketReceived);
-    ble_manager->SetOnErrorCallback(OnError);
-
-    // 3. 在app_main中不再调用StartAdvertising()。
-    //    广告会在BLE同步事件中自动启动，这更符合事件驱动编程的范式。
-
-    // 主程序进入无限循环
-    while (true) {
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
+    ESP_LOGI(kTag,
+             "app_main finished. Handing over control to FreeRTOS scheduler.");
 }
