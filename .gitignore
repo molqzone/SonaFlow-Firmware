@@ -4,3 +4,5 @@ sdkconfig.old
 
 .cache/
 .vscode/
+
+managed_components/

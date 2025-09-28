@@ -12,6 +12,9 @@ class FatalErrorState : public StateBase {
     void OnEnter() override;
     void Execute() override;
     AppState GetStateEnum() const override;
+
+   private:
+    bool led_on_ = false;
 };
 
 }  // namespace app

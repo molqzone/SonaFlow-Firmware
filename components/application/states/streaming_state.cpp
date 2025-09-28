@@ -7,6 +7,7 @@
 #include "audio_source.hpp"
 #include "ble_manager.hpp"
 #include "ble_packet.hpp"
+#include "led_manager.hpp"
 
 namespace {
 static const char* kTag = "StreamingState";
@@ -21,6 +22,8 @@ void StreamingState::OnEnter() {
     ESP_LOGI(kTag, "Entering Streaming state.");
     // Reset the packet sequence number for the new streaming session.
     sequence_number_ = 0;
+
+    led::LEDManager::GetInstance().SetPixelColor(0, 0, 255, 0);
 }
 
 void StreamingState::Execute() {

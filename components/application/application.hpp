@@ -12,6 +12,7 @@
 #include "states/fatal_error_state.hpp"
 #include "states/state_base.hpp"
 #include "states/streaming_state.hpp"
+#include "states/uninitialized_state.hpp"
 #include "states/waiting_state.hpp"
 
 namespace audio {
@@ -102,6 +103,7 @@ class Application {
     ConnectedIdleState connected_idle_state_;
     StreamingState streaming_state_;
     FatalErrorState fatal_error_state_;
+    UninitializedState uninitialized_state_;
 
     // --- Member Variables ---
     StateBase* current_state_;  // Pointer to the current active state object.

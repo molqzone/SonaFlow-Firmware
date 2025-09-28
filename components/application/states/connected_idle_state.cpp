@@ -1,7 +1,8 @@
 #include "states/connected_idle_state.hpp"
 
-#include "application.hpp"  // Required for context access and SetState
+#include "application.hpp"
 #include "esp_log.h"
+#include "led_manager.hpp"
 
 namespace {
 static const char* kTag = "ConnectedIdleState";
@@ -12,7 +13,9 @@ namespace app {
 ConnectedIdleState::ConnectedIdleState(Application& context)
     : StateBase(context) {}
 
-void ConnectedIdleState::OnEnter() {}
+void ConnectedIdleState::OnEnter() {
+    led::LEDManager::GetInstance().SetPixelColor(0, 0, 100, 100);
+}
 
 void ConnectedIdleState::Execute() {
     ESP_LOGI(kTag, "Transitioning to Streaming state from main loop...");
