@@ -14,7 +14,7 @@ ConnectedIdleState::ConnectedIdleState(Application& context)
     : StateBase(context) {}
 
 void ConnectedIdleState::OnEnter() {
-    led::LEDManager::GetInstance().SetPixelColor(0, 0, 100, 100);
+    led::LEDManager::GetInstance().SetAndRefreshColor(0, 0, 32, 32);
 }
 
 void ConnectedIdleState::Execute() {

@@ -17,9 +17,6 @@ class WaitingForConnectionState : public StateBase {
     void OnEnter() override;
     void Execute() override;
     AppState GetStateEnum() const override;
-
-   private:
-    bool initial_led_set_ = false;
 };
 
 }  // namespace app

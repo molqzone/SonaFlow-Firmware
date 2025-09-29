@@ -67,8 +67,17 @@ Application::Application()
 esp_err_t Application::Initialize() {
     ESP_LOGI(kTag, "Initializing components...");
 
+    // --- Initialize LEDManager Instance ---
+    led::LEDManager::Config led_config = {
+        .gpio_pin = 48, .max_leds = 1, .resolution_hz = 10 * 1000 * 1000};
+    esp_err_t ret = led::LEDManager::CreateInstance(led_config);
+    if (ret != ESP_OK) {
+        ESP_LOGE(kTag, "Failed to create LedManager instance.");
+        return ret;
+    }
+
     // --- Initialize BLEManager Singleton ---
-    esp_err_t ret = ble::BLEManager::CreateInstance();
+    ret = ble::BLEManager::CreateInstance();
     if (ret != ESP_OK) {
         ESP_LOGE(kTag, "Failed to create BLEManager instance.");
         return ret;
@@ -82,14 +91,6 @@ esp_err_t Application::Initialize() {
         return ESP_FAIL;
     }
 
-    // --- Initialize LEDManager Instance ---
-    led::LEDManager::Config led_config = {.gpio_pin = 48, .max_leds = 1};
-    ret = led::LEDManager::CreateInstance(led_config);
-    if (ret != ESP_OK) {
-        ESP_LOGE(kTag, "Failed to create LedManager instance.");
-        return ret;
-    }
-
     // --- Setup Callbacks ---
     // Use lambdas to forward the BLE events to our private handler methods.
     ble_manager_->SetOnConnectedCallback([this]() { this->OnBleConnected(); });
@@ -99,7 +100,7 @@ esp_err_t Application::Initialize() {
     ESP_LOGI(kTag, "Components initialized. Setting initial state.");
 
     return ESP_OK;
-}
+}  // namespace app
 
 void Application::Start() {
     ESP_LOGI(kTag, "Starting main application task...");

@@ -21,10 +21,10 @@ void FatalErrorState::OnEnter() {
 void FatalErrorState::Execute() {
     if (led_on_) {
         // If the state is 'on', set the LED to red.
-        led::LEDManager::GetInstance().SetPixelColor(0, 255, 0, 0);  // Red
+        led::LEDManager::GetInstance().SetAndRefreshColor(0, 255, 0, 0);  // Red
     } else {
         // If the state is 'off', turn the LED off.
-        led::LEDManager::GetInstance().Clear();
+        led::LEDManager::GetInstance().TurnOff();
     }
 
     // Invert the state for the next call.

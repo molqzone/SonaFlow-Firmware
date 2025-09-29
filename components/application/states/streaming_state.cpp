@@ -23,7 +23,7 @@ void StreamingState::OnEnter() {
     // Reset the packet sequence number for the new streaming session.
     sequence_number_ = 0;
 
-    led::LEDManager::GetInstance().SetPixelColor(0, 0, 255, 0);
+    led::LEDManager::GetInstance().SetAndRefreshColor(0, 0, 64, 0);
 }
 
 void StreamingState::Execute() {
