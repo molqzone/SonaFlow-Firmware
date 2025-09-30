@@ -35,47 +35,47 @@ class LEDManager {
     // --- Public Control Methods ---
 
     /**
-   * @brief Sets the color of a single LED and immediately displays it.
-   *
-   * This is the most common use case. It's a convenient helper that calls
-   * SetPixelColor() followed by Refresh().
-   *
-   * @param index The index of the LED to set (0-based).
-   * @param red The red component of the color (0-255).
-   * @param green The green component of the color (0-255).
-   * @param blue The blue component of the color (0-255).
-   * @return esp_err_t ESP_OK on success.
-   */
+     * @brief Sets the color of a single LED and immediately displays it.
+     *
+     * This is the most common use case. It's a convenient helper that calls
+     * SetPixelColor() followed by Refresh().
+     *
+     * @param index The index of the LED to set (0-based).
+     * @param red The red component of the color (0-255).
+     * @param green The green component of the color (0-255).
+     * @param blue The blue component of the color (0-255).
+     * @return esp_err_t ESP_OK on success.
+     */
     esp_err_t SetAndRefreshColor(uint32_t index, uint8_t red, uint8_t green,
                                  uint8_t blue);
 
     /**
-   * @brief Turns off all LEDs immediately.
-   *
-   * A convenient helper that calls led_strip_clear(). Since clear() also
-   * refreshes the strip, the change is immediate.
-   *
-   * @return esp_err_t ESP_OK on success.
-   */
+     * @brief Turns off all LEDs immediately.
+     *
+     * A convenient helper that calls led_strip_clear(). Since clear() also
+     * refreshes the strip, the change is immediate.
+     *
+     * @return esp_err_t ESP_OK on success.
+     */
     esp_err_t TurnOff();
 
     // --- Advanced Control Methods ---
 
     /**
-   * @brief Updates the color of a single LED in the internal buffer only.
-   *
-   * Use this method to stage changes for multiple LEDs before displaying them
-   * all at once with a single call to Refresh().
-   *
-   * @note This method does NOT change the physical LED's color. You must call
-   * Refresh() to apply the change.
-   */
+     * @brief Updates the color of a single LED in the internal buffer only.
+     *
+     * Use this method to stage changes for multiple LEDs before displaying them
+     * all at once with a single call to Refresh().
+     *
+     * @note This method does NOT change the physical LED's color. You must call
+     * Refresh() to apply the change.
+     */
     esp_err_t SetPixelColor(uint32_t index, uint8_t red, uint8_t green,
                             uint8_t blue);
 
     /**
-   * @brief Transmits the current state of the color buffer to the physical LEDs.
-   */
+     * @brief Transmits the current state of the color buffer to the physical LEDs.
+     */
     esp_err_t Refresh();
 
    private:
