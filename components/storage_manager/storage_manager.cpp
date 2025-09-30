@@ -76,9 +76,7 @@ esp_err_t StorageManager::Initialize() {
         return ret;
     }
 
-    // Open the log file in "append" mode. This will create the file if it
-    // doesn't exist, or open it for writing at the end if it does.
-    log_file_ = fopen(kLogFilePath, "a");
+    log_file_ = fopen(kLogFilePath, "a");  // Append mode
     if (log_file_ == nullptr) {
         ESP_LOGE(kTag, "Failed to open log file '%s' for writing.",
                  kLogFilePath);
@@ -97,8 +95,8 @@ esp_err_t StorageManager::LogAudioFeature(const ble::AudioPacket& packet) {
         return ESP_ERR_INVALID_STATE;
     }
 
-    // Write the data in a simple CSV (Comma-Separated Values) format for easy
-    // parsing later. Format: timestamp,sequence,payload
+    // Write the data in a simple CSV format for easy parsing later.
+    // Format: timestamp,sequence,payload
     fprintf(log_file_, "%u,%u,%d\n", packet.timestamp, packet.sequence,
             packet.payload);
 

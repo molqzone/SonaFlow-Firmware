@@ -8,6 +8,7 @@
 #include "ble_manager.hpp"
 #include "ble_packet.hpp"
 #include "led_manager.hpp"
+#include "storage_manager.hpp"
 
 namespace {
 static const char* kTag = "StreamingState";
@@ -58,6 +59,9 @@ void StreamingState::Execute() {
         .checksum = 0,  // Checksum will be calculated by the encoder.
     };
     context_.GetBleManager()->SendAudioPacket(packet);
+
+    // Log the feature to flash storage
+    storage::StorageManager::GetInstance().LogAudioFeature(packet);
 
     // --- Rate Limiting ---
     // Yield the CPU and control the data transmission rate.

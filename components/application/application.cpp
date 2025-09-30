@@ -10,6 +10,7 @@
 #include "ble_manager.hpp"
 #include "led_manager.hpp"
 #include "state_base.hpp"
+#include "storage_manager.hpp"
 
 namespace {
 // File-local constants.
@@ -73,6 +74,14 @@ esp_err_t Application::Initialize() {
     esp_err_t ret = led::LEDManager::CreateInstance(led_config);
     if (ret != ESP_OK) {
         ESP_LOGE(kTag, "Failed to create LedManager instance.");
+        return ret;
+    }
+
+    // --- Initialize StorageManager Instance ---
+    ESP_LOGI(kTag, "Creating StorageManager instance...");
+    ret = storage::StorageManager::CreateInstance();
+    if (ret != ESP_OK) {
+        ESP_LOGE(kTag, "Failed to create StorageManager instance.");
         return ret;
     }
 

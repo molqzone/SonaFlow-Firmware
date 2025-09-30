@@ -13,4 +13,5 @@ idf_component_register(SRCS
                            "led_manager"
                            "audio_source"
                            "ble_manager"
+                           "storage_manager"
                        )
